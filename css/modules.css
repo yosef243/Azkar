@@ -1,0 +1,271 @@
+/* ==========================================
+   Layouts
+   ========================================== */
+.page {
+    padding: 15px;
+    padding-top: 20px;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.4s ease;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.flex-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.flex-gap {
+    display: flex;
+    gap: 10px;
+}
+
+.home-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+/* ==========================================
+   Header (Clean & Minimalist)
+   ========================================== */
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: var(--card-bg); 
+    border-bottom: 1px solid var(--border);
+    color: var(--primary); 
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--shadow-sm);
+    background-color: color-mix(in srgb, var(--card-bg) 90%, transparent);
+}
+
+.header__title {
+    font-size: 1.4rem;
+    font-weight: 800;
+    margin: 0;
+    text-align: center;
+    flex-grow: 1;
+}
+
+/* ==========================================
+   Cards
+   ========================================== */
+.cardx {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.3s, box-shadow 0.3s, background-color 0.3s;
+}
+
+.cardx--center {
+    text-align: center;
+}
+
+.cardx__title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.2rem;
+    color: var(--primary);
+    margin-bottom: 15px;
+}
+
+/* آية اليوم (شكل هادئ ومريح للعين) */
+.cardx--hero {
+    position: relative;
+    overflow: hidden;
+    background: var(--primary-light);
+    border: 1px solid var(--border);
+}
+
+.cardx--hero .cardx__title {
+    color: var(--primary);
+    position: relative;
+    z-index: 2;
+}
+
+.cardx--hero .amiri-text {
+    position: relative;
+    z-index: 2;
+    font-weight: bold;
+    color: var(--text-main);
+}
+
+.cardx--hero i.fa-quote-left {
+    position: absolute;
+    bottom: -10px;
+    left: 10px;
+    font-size: 4rem;
+    color: var(--primary);
+    opacity: 0.1; 
+    z-index: 1;
+}
+
+.cardx--message {
+    border-right: 4px solid var(--accent);
+}
+
+/* ==========================================
+   Dashboard Buttons (Home Grid)
+   ========================================== */
+.home-btn {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--text-main);
+    box-shadow: var(--shadow-sm);
+}
+
+.home-btn:active {
+    transform: scale(0.95);
+    background: var(--primary-light);
+    border-color: var(--primary);
+}
+
+.home-icon-box {
+    width: 50px;
+    height: 50px;
+    background: var(--primary-light);
+    color: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.4rem;
+    transition: all 0.3s;
+}
+
+.home-btn:active .home-icon-box {
+    background: var(--primary);
+    color: #ffffff;
+}
+
+.home-btn-text {
+    font-weight: bold;
+    font-size: 0.95rem;
+    text-align: center;
+}
+
+/* ==========================================
+   Masbaha Button
+   ========================================== */
+.masbaha-btn {
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    margin: 20px auto;
+    display: flex;
+    flex-direction: column;
+    border: 8px solid var(--primary-light);
+    background: var(--card-bg);
+    box-shadow: 0 0 30px var(--primary-light), inset 0 0 20px rgba(0,0,0,0.05);
+    transition: all 0.1s;
+}
+
+.masbaha-btn:active {
+    transform: scale(0.92);
+    border-color: var(--primary);
+    background: var(--primary-light);
+}
+
+/* ==========================================
+   Specific Icon Buttons
+   ========================================== */
+.icon-btn--transparent {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: var(--primary); 
+}
+
+/* ==========================================
+   Modal & Custom Zekr Items
+   ========================================== */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.6); 
+    backdrop-filter: blur(3px);
+    z-index: 2000;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    animation: fadeIn 0.3s;
+}
+
+.modal-content {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    width: 100%;
+    max-width: 400px;
+    border-radius: var(--radius-lg);
+    padding: 25px;
+    box-shadow: var(--shadow-modal);
+    position: relative;
+    transform: translateY(20px);
+    animation: slideUp 0.3s forwards;
+}
+
+@keyframes slideUp {
+    to { transform: translateY(0); }
+}
+
+/* 💡 تم التعديل: كروت قائمة الأذكار المخصصة الأنيقة */
+.custom-zekr-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-color);
+    border: 1px solid var(--border);
+    padding: 12px 15px;
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+    gap: 10px;
+}
+
+.custom-zekr-item:active {
+    transform: scale(0.98);
+    border-color: var(--primary);
+}
+
+.custom-zekr-text {
+    flex-grow: 1;
+    font-weight: bold;
+    color: var(--text-main);
+    font-size: 1.1rem;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

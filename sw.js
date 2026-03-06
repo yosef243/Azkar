@@ -1,122 +1,80 @@
-// v0.0.5 - GitHub Pages under /Saber/ (Production Ready - Final)
-const VERSION = 'v0.0.4';
-const SCOPE = '/Saber/';
-const CACHE_NAME = `sabry-sadaqa-${VERSION}`;
+// تم التحديث إلى نسخة جديدة
+const CACHE_NAME = 'azkar-app-v0.0.6';
 
-// استخدم مسارات مطلقة داخل الـ scope لتفادي مشاكل المسارات النسبية (./) وإعادة التوجيه
-const ASSETS = [
-  SCOPE,
-  `${SCOPE}index.html`,
-  `${SCOPE}css/main.css`,
-  `${SCOPE}css/themes.css`,
-  `${SCOPE}js/core.js`,
-  `${SCOPE}js/ui.js`,
-  `${SCOPE}js/pwa.js`,
-  `${SCOPE}data/azkar.js`,
-  `${SCOPE}data/duas.js`,
-  `${SCOPE}data/tasks.js`,
-  `${SCOPE}data/names.js`,
-  `${SCOPE}data/stories.js`,
-  `${SCOPE}manifest.json`,
-  `${SCOPE}icons/icon-192x192.png`,
-  `${SCOPE}icons/icon-512x512.png`,
-  `${SCOPE}icons/Preview.png` // صورة Open Graph
+const urlsToCache = [
+    './',
+    './index.html',
+    './manifest.json',
+    './css/main.css',
+    './css/themes.css',
+    './css/modules.css',
+    './js/app.js',
+    './js/masbaha.js',
+    './js/tasks.js',
+    './js/quran.js',
+    './js/content.js', 
+    './js/storage.js',
+    './js/pwa.js',
+    './data/azkar.js',
+    './data/names.js',
+    './data/messages.js',
+    './data/quranData.js',
+    './data/duasData.js',
+    './data/stories.js',
+    './icons/icon-192x192.png', 
+    './icons/icon-512x512.png'
 ];
 
-// تثبيت: كاش للأصول الأساسية (مع تحمل الأخطاء عبر allSettled بدلاً من addAll)
-self.addEventListener('install', (event) => {
-  event.waitUntil((async () => {
-    const cache = await caches.open(CACHE_NAME);
-
-    await Promise.allSettled(
-      ASSETS.map((url) => cache.add(url))
+// 1. تنصيب وتخزين الملفات 
+self.addEventListener('install', event => {
+    event.waitUntil(
+        caches.open(CACHE_NAME)
+        .then(cache => {
+            console.log('[ServiceWorker] Caching App Shell');
+            return cache.addAll(urlsToCache);
+        })
     );
-
-    await self.skipWaiting();
-  })());
+    // لا نقوم بـ skipWaiting هنا مباشرة، بل ننتظر أمر المستخدم
 });
 
-// التفعيل: تنظيف الكاش القديم
-self.addEventListener('activate', (event) => {
-  event.waitUntil((async () => {
-    const keys = await caches.keys();
-    await Promise.all(
-      keys.map((key) => (key !== CACHE_NAME ? caches.delete(key) : null))
+// 2. تفعيل وتنظيف الكاش القديم
+self.addEventListener('activate', event => {
+    event.waitUntil(
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(cacheName => {
+                    if (cacheName !== CACHE_NAME) {
+                        console.log('[ServiceWorker] Removing old cache', cacheName);
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
+        })
     );
-    await self.clients.claim();
-  })());
+    self.clients.claim();
 });
 
-// Helpers للتحقق من النطاق
-function isSameOrigin(requestUrl) {
-  return requestUrl.origin === self.location.origin;
-}
-
-function isInScope(pathname) {
-  return pathname.startsWith(SCOPE);
-}
-
-// توحيد مفتاح تخزين الـ HTML لتجنب تضخم الكاش مع الروابط المخصصة
-function getHtmlCacheKey() {
-  return new Request(`${SCOPE}index.html`);
-}
-
-// استراتيجية الجلب (Fetch Strategy)
-self.addEventListener('fetch', (event) => {
-  const req = event.request;
-
-  // التعامل فقط مع طلبات GET
-  if (req.method !== 'GET') return;
-
-  const url = new URL(req.url);
-
-  // تجاهل أي طلب خارج الدومين أو خارج نطاق التطبيق (مثل أدسنس/خطوط جوجل) لمنع CORS ومشاكل غير متوقعة
-  if (!isSameOrigin(url) || !isInScope(url.pathname)) return;
-
-  // HTML: Network-first لضمان وصول التحديثات سريعاً
-  const accept = req.headers.get('accept') || '';
-  const isHTML = accept.includes('text/html') || url.pathname.endsWith('/') || url.pathname.endsWith('.html');
-
-  if (isHTML) {
-    event.respondWith((async () => {
-      const cache = await caches.open(CACHE_NAME);
-      const htmlKey = getHtmlCacheKey();
-
-      try {
-        const fresh = await fetch(req, { cache: 'no-store' });
-
-        // نخزن نسخة واحدة من index.html فقط بغض النظر عن query parameters
-        cache.put(htmlKey, fresh.clone());
-
-        return fresh;
-      } catch {
-        // Offline fallback
-        return (await cache.match(htmlKey)) || caches.match(`${SCOPE}index.html`);
-      }
-    })());
-    return;
-  }
-
-  // Static assets: Cache-first مع تحمل فشل الشبكة
-  event.respondWith((async () => {
-    const cached = await caches.match(req);
-    if (cached) return cached;
-
-    try {
-      const fresh = await fetch(req);
-      const cache = await caches.open(CACHE_NAME);
-      cache.put(req, fresh.clone());
-      return fresh;
-    } catch {
-      // لو الملف مش موجود في الكاش وانقطع النت، نرجع fallback لطيف
-      return caches.match(`${SCOPE}index.html`);
+// 3. جلب الملفات (من الكاش أو الشبكة)
+self.addEventListener('fetch', event => {
+    if (!event.request.url.startsWith(self.location.origin)) {
+        return;
     }
-  })());
+    event.respondWith(
+        caches.match(event.request)
+        .then(response => {
+            if (response) {
+                return response; 
+            }
+            return fetch(event.request).catch(() => {
+                console.log('[ServiceWorker] Fetch failed; returning offline page instead.');
+            });
+        })
+    );
 });
 
-// الاستماع لرسالة التحديث الفوري من الواجهة
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+// 4. الاستماع لأوامر التحديث من واجهة المستخدم
+self.addEventListener('message', event => {
+    if (event.data && event.data.action === 'skipWaiting') {
+        self.skipWaiting();
+    }
 });

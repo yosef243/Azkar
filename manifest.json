@@ -1,17 +1,12 @@
 {
-  "name": "صدقة جارية | Sadaqa",
-  "short_name": "Sadaqa",
-  "id": "/Saber/",
-  "start_url": "/Saber/index.html",
-  "scope": "/Saber/",
+  "name": "أذكار المسلم",
+  "short_name": "أذكار",
+  "description": "تطبيق إسلامي شامل: أذكار، قرآن، مسبحة ذكية، مهام وقصص.",
+  "start_url": "./index.html",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
-  "background_color": "#F4F9F4",
-  "theme_color": "#1E6F5C",
-  "description": "تطبيق صدقة جارية، مسبحة، وأذكار",
+  "background_color": "#0A2E24",
+  "theme_color": "#125B50",
   "orientation": "portrait",
-  "lang": "ar",
-  "dir": "rtl",
   "icons": [
     {
       "src": "icons/icon-192x192.png",
