@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-// 💡 التعديل هنا: ضفنا setPersistence و browserLocalPersistence
-import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+// 💡 رجعنا استدعاء signInWithPopup لأنها الأفضل لتطبيقات PWA الحديثة
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -18,19 +18,18 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-// التقاط نتيجة التحويل
-getRedirectResult(auth).then((result) => {
-    if (result && result.user) {
-        if(window.app) window.app.showToast('تم تسجيل الدخول بنجاح! ✅');
-        fetchDataFromCloud(result.user.uid);
-    }
-}).catch((error) => {
-    console.error("Redirect Error:", error);
+// إجبار جوجل على إظهار شاشة اختيار الحساب دائماً
+provider.setCustomParameters({
+  prompt: 'select_account'
 });
 
-// مراقب حالة تسجيل الدخول (ده اللي بيحدث الواجهة)
+// مراقب حالة تسجيل الدخول
 onAuthStateChanged(auth, (user) => {
     updateAuthUI(user);
+    if (user) {
+        // لو مسجل دخول، هات بياناته من السحابة في الخلفية
+        fetchDataFromCloud(user.uid);
+    }
 });
 
 function updateAuthUI(user) {
@@ -41,7 +40,6 @@ function updateAuthUI(user) {
     if (!authArea) return;
 
     if (user) {
-        // لو مسجل دخول
         if (userNameEl) userNameEl.textContent = user.displayName || 'حسابي';
         if (avatarEl && user.photoURL) avatarEl.src = user.photoURL;
         
@@ -63,7 +61,6 @@ function updateAuthUI(user) {
         });
 
     } else {
-        // لو مش مسجل دخول
         if (userNameEl) userNameEl.textContent = 'حسابي';
         if (avatarEl) avatarEl.src = 'https://cdn-icons-png.flaticon.com/512/3177/3177440.png';
 
@@ -73,15 +70,19 @@ function updateAuthUI(user) {
             </button>
         `;
 
-        // 💡 التعديل الأهم: إجبار المتصفح على حفظ الدخول في الذاكرة الدائمة
+        // 💡 استخدام النافذة المنبثقة السريعة
         document.getElementById('btnLogin').addEventListener('click', async () => {
-            if(window.app) window.app.showToast('جاري الاتصال بجوجل... ⏳');
+            if(window.app) window.app.showToast('جاري فتح نافذة تسجيل الدخول... ⏳');
             try {
-                // أمر الحفظ الدائم قبل التحويل
+                // نأمر المتصفح بحفظ الدخول للأبد
                 await setPersistence(auth, browserLocalPersistence);
-                await signInWithRedirect(auth, provider);
+                // نفتح نافذة جوجل المنبثقة
+                const result = await signInWithPopup(auth, provider);
+                if (result && result.user) {
+                    if(window.app) window.app.showToast('تم تسجيل الدخول بنجاح! ✅');
+                }
             } catch (error) {
-                alert("مشكلة في الاتصال: " + error.message);
+                alert("سبب المشكلة: " + error.message);
                 console.error("Auth Error:", error);
             }
         });
@@ -115,8 +116,6 @@ async function fetchDataFromCloud(uid) {
                 
                 if (window.masbaha) window.masbaha.updateUI();
                 if (window.tasks) window.tasks.render();
-                
-                if(window.app) window.app.showToast('تم استرجاع بياناتك بنجاح! ☁️⬇️');
             }
         }
     } catch (e) {
