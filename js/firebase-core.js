@@ -1,9 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-// 💡 التعديل هنا: استدعينا signInWithRedirect و getRedirectResult
 import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// إعدادات Firebase الخاصة بك (من الصورة الخاصة بك 🚀)
+// إعدادات Firebase الخاصة بك (أخدتها من الصورة بتاعتك 🚀)
 const firebaseConfig = {
     apiKey: "AIzaSyATTnC5E_oSzZ2ef3OPngLwect_OubtiSc",
     authDomain: "azkar-app-18d03.firebaseapp.com",
@@ -20,7 +19,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-// 💡 التقاط نتيجة تسجيل الدخول بعد العودة من صفحة جوجل
+// التقاط نتيجة تسجيل الدخول بعد العودة من صفحة جوجل
 getRedirectResult(auth).then((result) => {
     if (result && result.user) {
         if(window.app) window.app.showToast('تم تسجيل الدخول بنجاح! ✅');
@@ -29,6 +28,8 @@ getRedirectResult(auth).then((result) => {
 }).catch((error) => {
     if(window.app) window.app.showToast('حدث خطأ أثناء تسجيل الدخول', 'error');
     console.error("Login Error:", error);
+    // 💡 رسالة عشان لو رجع من جوجل وفيه مشكلة نعرفها
+    alert("خطأ بعد العودة من جوجل: " + error.message); 
 });
 
 // تحديث واجهة المستخدم بناءً على حالة تسجيل الدخول
@@ -72,10 +73,16 @@ function updateAuthUI(user) {
             </button>
         `;
 
-        document.getElementById('btnLogin').addEventListener('click', () => {
+        // 💡 التعديل الجديد عشان نمسك الخطأ الصامت
+        document.getElementById('btnLogin').addEventListener('click', async () => {
             if(window.app) window.app.showToast('جاري تحويلك لتسجيل الدخول... ⏳');
-            // 💡 التعديل هنا: استخدام Redirect بدلاً من Popup
-            signInWithRedirect(auth, provider);
+            try {
+                await signInWithRedirect(auth, provider);
+            } catch (error) {
+                // لو الموبايل رفض التحويل، هيطلعلك الرسالة دي في وشك!
+                alert("سبب المشكلة: " + error.message);
+                console.error("Firebase Login Error:", error);
+            }
         });
     }
 }
