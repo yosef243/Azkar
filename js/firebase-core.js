@@ -1,15 +1,17 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+// 💡 التعديل هنا: استدعينا signInWithRedirect و getRedirectResult
+import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// ⚠️ ضع إعدادات Firebase الخاصة بك هنا
+// إعدادات Firebase الخاصة بك (من الصورة الخاصة بك 🚀)
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyATTnC5E_oSzZ2ef3OPngLwect_OubtiSc",
+    authDomain: "azkar-app-18d03.firebaseapp.com",
+    projectId: "azkar-app-18d03",
+    storageBucket: "azkar-app-18d03.firebasestorage.app",
+    messagingSenderId: "299978759339",
+    appId: "1:299978759339:web:a72a1bc49d25210abb6bee",
+    measurementId: "G-WXG1QL95N0"
 };
 
 // تهيئة Firebase
@@ -17,6 +19,17 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
+
+// 💡 التقاط نتيجة تسجيل الدخول بعد العودة من صفحة جوجل
+getRedirectResult(auth).then((result) => {
+    if (result && result.user) {
+        if(window.app) window.app.showToast('تم تسجيل الدخول بنجاح! ✅');
+        fetchDataFromCloud(result.user.uid);
+    }
+}).catch((error) => {
+    if(window.app) window.app.showToast('حدث خطأ أثناء تسجيل الدخول', 'error');
+    console.error("Login Error:", error);
+});
 
 // تحديث واجهة المستخدم بناءً على حالة تسجيل الدخول
 function updateAuthUI(user) {
@@ -49,7 +62,7 @@ function updateAuthUI(user) {
         });
 
     } else {
-        // المستخدم غير مسجل - 💡 تم تغيير النص إلى "تسجيل الدخول"
+        // المستخدم غير مسجل
         if (userNameEl) userNameEl.textContent = 'حسابي';
         if (avatarEl) avatarEl.src = 'https://cdn-icons-png.flaticon.com/512/3177/3177440.png';
 
@@ -60,15 +73,9 @@ function updateAuthUI(user) {
         `;
 
         document.getElementById('btnLogin').addEventListener('click', () => {
-            if(window.app) window.app.showToast('جاري تسجيل الدخول... ⏳');
-            signInWithPopup(auth, provider).then((result) => {
-                if(window.app) window.app.showToast('تم تسجيل الدخول بنجاح! ✅');
-                // محاولة جلب البيانات من السحابة بعد تسجيل الدخول
-                fetchDataFromCloud(result.user.uid);
-            }).catch((error) => {
-                if(window.app) window.app.showToast('حدث خطأ أثناء تسجيل الدخول', 'error');
-                console.error(error);
-            });
+            if(window.app) window.app.showToast('جاري تحويلك لتسجيل الدخول... ⏳');
+            // 💡 التعديل هنا: استخدام Redirect بدلاً من Popup
+            signInWithRedirect(auth, provider);
         });
     }
 }
