@@ -1,8 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+// 💡 التعديل هنا: ضفنا setPersistence و browserLocalPersistence
+import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// 💡 إعداداتك الصحيحة 100%
 const firebaseConfig = {
   apiKey: "AIzaSyATTnC5E_oSzZ2ef3OPngLwect_OubtISc",
   authDomain: "azkar-app-18d03.firebaseapp.com",
@@ -13,25 +13,26 @@ const firebaseConfig = {
   measurementId: "G-WXG1QL95N0"
 };
 
-// تهيئة Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-// التقاط نتيجة تسجيل الدخول بعد العودة من صفحة جوجل
+// التقاط نتيجة التحويل
 getRedirectResult(auth).then((result) => {
     if (result && result.user) {
         if(window.app) window.app.showToast('تم تسجيل الدخول بنجاح! ✅');
         fetchDataFromCloud(result.user.uid);
     }
 }).catch((error) => {
-    if(window.app) window.app.showToast('حدث خطأ أثناء تسجيل الدخول', 'error');
-    console.error("Login Error:", error);
-    alert("خطأ بعد العودة من جوجل: " + error.message); 
+    console.error("Redirect Error:", error);
 });
 
-// تحديث واجهة المستخدم بناءً على حالة تسجيل الدخول
+// مراقب حالة تسجيل الدخول (ده اللي بيحدث الواجهة)
+onAuthStateChanged(auth, (user) => {
+    updateAuthUI(user);
+});
+
 function updateAuthUI(user) {
     const authArea = document.getElementById('authButtonArea');
     const userNameEl = document.getElementById('userName');
@@ -40,7 +41,7 @@ function updateAuthUI(user) {
     if (!authArea) return;
 
     if (user) {
-        // المستخدم مسجل الدخول
+        // لو مسجل دخول
         if (userNameEl) userNameEl.textContent = user.displayName || 'حسابي';
         if (avatarEl && user.photoURL) avatarEl.src = user.photoURL;
         
@@ -62,7 +63,7 @@ function updateAuthUI(user) {
         });
 
     } else {
-        // المستخدم غير مسجل
+        // لو مش مسجل دخول
         if (userNameEl) userNameEl.textContent = 'حسابي';
         if (avatarEl) avatarEl.src = 'https://cdn-icons-png.flaticon.com/512/3177/3177440.png';
 
@@ -72,19 +73,21 @@ function updateAuthUI(user) {
             </button>
         `;
 
+        // 💡 التعديل الأهم: إجبار المتصفح على حفظ الدخول في الذاكرة الدائمة
         document.getElementById('btnLogin').addEventListener('click', async () => {
-            if(window.app) window.app.showToast('جاري تحويلك لتسجيل الدخول... ⏳');
+            if(window.app) window.app.showToast('جاري الاتصال بجوجل... ⏳');
             try {
+                // أمر الحفظ الدائم قبل التحويل
+                await setPersistence(auth, browserLocalPersistence);
                 await signInWithRedirect(auth, provider);
             } catch (error) {
-                alert("سبب المشكلة: " + error.message);
-                console.error("Firebase Login Error:", error);
+                alert("مشكلة في الاتصال: " + error.message);
+                console.error("Auth Error:", error);
             }
         });
     }
 }
 
-// مزامنة البيانات للسحابة
 async function syncDataToCloud(uid) {
     if (!window.storage || !window.storage.state) return;
     try {
@@ -96,11 +99,9 @@ async function syncDataToCloud(uid) {
         if(window.app) window.app.showToast('تم حفظ بياناتك بنجاح! ☁️✅');
     } catch (e) {
         if(window.app) window.app.showToast('حدث خطأ أثناء المزامنة', 'error');
-        console.error("Error adding document: ", e);
     }
 }
 
-// استرجاع البيانات من السحابة
 async function fetchDataFromCloud(uid) {
     try {
         const docRef = doc(db, "users", uid);
@@ -112,7 +113,6 @@ async function fetchDataFromCloud(uid) {
                 window.storage.state = data.state;
                 window.storage.save();
                 
-                // تحديث الواجهة
                 if (window.masbaha) window.masbaha.updateUI();
                 if (window.tasks) window.tasks.render();
                 
@@ -120,11 +120,6 @@ async function fetchDataFromCloud(uid) {
             }
         }
     } catch (e) {
-        console.error("Error fetching document: ", e);
+        console.error("Fetch Error: ", e);
     }
 }
-
-// مراقب حالة تسجيل الدخول
-onAuthStateChanged(auth, (user) => {
-    updateAuthUI(user);
-});
