@@ -1,5 +1,5 @@
 // تم التحديث إلى نسخة جديدة
-const CACHE_NAME = 'azkar-app-v0.0.5';
+const CACHE_NAME = 'azkar-app-v0.0.6';
 
 const urlsToCache = [
     './',
