@@ -1,58 +1,73 @@
 /**
  * ====================================================================
  * Quran Reader & Bookmark Manager
- * Using HTML Templates & DOM APIs for Enterprise Performance
  * ====================================================================
  */
 
 const quran = {
     currentSurah: null,
+    data: null,
+    
+    // 💡 مصفوفة بأسماء سور القرآن الكريم الـ 114 بالترتيب
+    surahNames: [
+        "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس",
+        "هود", "يوسف", "الرعد", "إبراهيم", "الحجر", "النحل", "الإسراء", "الكهف", "مريم", "طه",
+        "الأنبياء", "الحج", "المؤمنون", "النور", "الفرقان", "الشعراء", "النمل", "القصص", "العنكبوت", "الروم",
+        "لقمان", "السجدة", "الأحزاب", "سبأ", "فاطر", "يس", "الصافات", "ص", "الزمر", "غافر",
+        "فصلت", "الشورى", "الزخرف", "الدخان", "الجاثية", "الأحقاف", "محمد", "الفتح", "الحجرات", "ق",
+        "الذاريات", "الطور", "النجم", "القمر", "الرحمن", "الواقعة", "الحديد", "المجادلة", "الحشر", "الممتحنة",
+        "الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم", "الملك", "القلم", "الحاقة", "المعارج",
+        "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات", "النبأ", "النازعات", "عبس",
+        "التكوير", "الانفطار", "المطففين", "الانشقاق", "البروج", "الطارق", "الأعلى", "الغاشية", "الفجر", "البلد",
+        "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات",
+        "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر",
+        "المسد", "الإخلاص", "الفلق", "الناس"
+    ],
 
     init() {
+        this.data = window.quranData || window.QURAN_JSON;
+        if (!this.data) {
+            console.error("لم يتم العثور على بيانات القرآن. تأكد من استدعاء ملف quranData.js");
+            return;
+        }
         this.renderSurahList();
         this.checkBookmark();
     },
 
-    // ==========================================
-    // 1. عرض قائمة السور (باستخدام القوالب)
-    // ==========================================
     renderSurahList() {
         const list = document.getElementById('surahList');
-        if (!list || !window.QURAN_JSON) return;
+        if (!list || !this.data) return;
 
-        list.innerHTML = ''; // تفريغ القائمة
-        
+        list.innerHTML = ''; 
         const template = document.getElementById('tpl-surah-btn');
         if (!template) return;
 
-        // المرور على الـ 114 سورة
+        const isArray = Array.isArray(this.data);
+
         for (let i = 1; i <= 114; i++) {
-            if (window.QURAN_JSON[i] && window.QURAN_JSON[i].length > 0) {
-                const firstAyah = window.QURAN_JSON[i][0];
-                const surahName = firstAyah.surah_name_ar || firstAyah.surah_name || `سورة ${i}`;
-                
-                // استنساخ قالب السورة
-                const clone = template.content.cloneNode(true);
-                const btn = clone.querySelector('.surah-item');
-                const nameSpan = clone.querySelector('.surah-name');
-                const numSpan = clone.querySelector('.surah-num');
+            const surahData = isArray ? this.data[i - 1] : this.data[i];
+            if (!surahData) continue;
 
-                // تعبئة البيانات برمجياً
-                nameSpan.textContent = surahName;
-                numSpan.textContent = i;
-                
-                // إضافة خاصية البحث وحدث الضغط
+            // 💡 سحب اسم السورة من المصفوفة بتاعتنا بدل الملف
+            const surahName = "سورة " + this.surahNames[i - 1];
+
+            const clone = template.content.cloneNode(true);
+            const btn = clone.querySelector('.surah-item');
+            const nameSpan = clone.querySelector('.surah-name');
+            const numSpan = clone.querySelector('.surah-num');
+
+            if (nameSpan) nameSpan.textContent = surahName;
+            if (numSpan) numSpan.textContent = i;
+            
+            if (btn) {
                 btn.setAttribute('data-name', surahName);
-                btn.onclick = () => window.quran?.openSurah(i, surahName);
-
-                list.appendChild(clone);
+                btn.onclick = () => window.quran.openSurah(i, surahName, surahData);
             }
+
+            list.appendChild(clone);
         }
     },
 
-    // ==========================================
-    // 2. البحث والتصفية
-    // ==========================================
     filterSurahs() {
         const searchInput = document.getElementById('searchSurah');
         if (!searchInput) return;
@@ -70,10 +85,7 @@ const quran = {
         });
     },
 
-    // ==========================================
-    // 3. فتح السورة وقراءة الآيات (DOM Creation)
-    // ==========================================
-    openSurah(num, name) {
+    openSurah(num, name, surahData) {
         window.history.pushState({ section: 'quran', sub: true }, '', '#surah-reader');
         this.currentSurah = { num, name };
         
@@ -83,10 +95,17 @@ const quran = {
         const container = document.getElementById('ayahsContainer');
         if (!container) return;
         
-        container.innerHTML = ''; // تفريغ السورة السابقة
-        const ayahs = window.QURAN_JSON[num];
+        container.innerHTML = ''; 
         
-        // إضافة البسملة لجميع السور عدا الفاتحة (1) والتوبة (9)
+        let ayahs = [];
+        if (Array.isArray(surahData)) {
+            ayahs = surahData;
+        } else if (surahData.verses) {
+            ayahs = surahData.verses;
+        } else if (surahData.ayahs) {
+            ayahs = surahData.ayahs;
+        }
+
         if (num !== 1 && num !== 9) {
             const basmala = document.createElement('div');
             basmala.className = 'cardx--center';
@@ -95,35 +114,30 @@ const quran = {
             container.appendChild(basmala);
         }
 
-        // بناء الآيات برمجياً
-        ayahs.forEach(ayah => {
-            let text = ayah.text;
+        ayahs.forEach((ayah, index) => {
+            let text = ayah.text || ayah.text_ar || ayah.content || (typeof ayah === 'string' ? ayah : '');
+            let ayahNum = ayah.numberInSurah || ayah.verse_number || ayah.id || (index + 1);
             
-            // إزالة البسملة المدمجة في الآية الأولى
-            if (num !== 1 && num !== 9 && ayah.numberInSurah === 1) {
-                text = text.replace("بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ", "").trim();
+            if (num !== 1 && num !== 9 && ayahNum === 1 && typeof text === 'string') {
+                text = text.replace(/بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ/g, "").replace(/بسم الله الرحمن الرحيم/g, "").trim();
             }
             
-            // حاوية الآية
             const ayahSpan = document.createElement('span');
             ayahSpan.style.display = 'inline';
             ayahSpan.style.lineHeight = '2.2';
             
-            // نص الآية
-            const textNode = document.createTextNode(text + ' ');
+            const textNode = document.createTextNode((text || '') + ' ');
             ayahSpan.appendChild(textNode);
             
-            // دائرة رقم الآية
             const numberSpan = document.createElement('span');
             numberSpan.className = 'no-select';
             numberSpan.style.cssText = 'display: inline-flex; justify-content: center; align-items: center; width: 35px; height: 35px; background: var(--primary-light); color: var(--primary); border-radius: 50%; font-size: 1rem; margin: 0 5px; font-family: "Tajawal", sans-serif; border: 1px solid var(--border); font-weight: bold;';
-            numberSpan.textContent = ayah.numberInSurah;
+            numberSpan.textContent = ayahNum;
             
             ayahSpan.appendChild(numberSpan);
             container.appendChild(ayahSpan);
         });
         
-        // إضافة زر حفظ العلامة في نهاية السورة
         const saveContainer = document.createElement('div');
         saveContainer.className = 'cardx--center';
         saveContainer.style.marginTop = '35px';
@@ -136,7 +150,6 @@ const quran = {
         saveContainer.appendChild(saveBtn);
         container.appendChild(saveContainer);
         
-        // إخفاء القائمة وإظهار القارئ
         const listContainer = document.getElementById('surahListContainer');
         const readerContainer = document.getElementById('surahReader');
         
@@ -156,9 +169,6 @@ const quran = {
         window.history.back();
     },
 
-    // ==========================================
-    // 4. نظام العلامات (Bookmarks)
-    // ==========================================
     saveBookmark() {
         if (!this.currentSurah || !window.storage) return;
         
@@ -170,7 +180,7 @@ const quran = {
         window.storage.save();
         
         if (window.app) window.app.showToast('تم حفظ العلامة بنجاح 🔖');
-        this.checkBookmark(); // لتحديث زر "أكمل" في القائمة
+        this.checkBookmark();
     },
 
     checkBookmark() {
@@ -196,7 +206,10 @@ const quran = {
         if (!window.storage || !window.storage.state.quranBookmark) return;
         
         const b = window.storage.state.quranBookmark;
-        this.openSurah(b.surahNum, b.surahName);
+        const isArray = Array.isArray(this.data);
+        const surahData = isArray ? this.data[b.surahNum - 1] : this.data[b.surahNum];
+        
+        this.openSurah(b.surahNum, b.surahName, surahData);
         
         setTimeout(() => {
             window.scrollTo({ top: b.scroll || 0, behavior: 'smooth' });
