@@ -1,122 +1,143 @@
-// v0.0.5 - GitHub Pages under /Saber/ (Production Ready - Final)
-const VERSION = 'v0.0.4';
-const SCOPE = '/Saber/';
-const CACHE_NAME = `sabry-sadaqa-${VERSION}`;
+/**
+ * ====================================================================
+ * Service Worker
+ * ====================================================================
+ * مسؤول عن:
+ * - تخزين App Shell
+ * - دعم التشغيل بدون إنترنت
+ * - fallback آمن لصفحة التطبيق
+ * - دعم التحديثات الذكية
+ * - العمل بمسارات نسبية لتجنب مشاكل subpath deployment
+ */
 
-// استخدم مسارات مطلقة داخل الـ scope لتفادي مشاكل المسارات النسبية (./) وإعادة التوجيه
-const ASSETS = [
-  SCOPE,
-  `${SCOPE}index.html`,
-  `${SCOPE}css/main.css`,
-  `${SCOPE}css/themes.css`,
-  `${SCOPE}js/core.js`,
-  `${SCOPE}js/ui.js`,
-  `${SCOPE}js/pwa.js`,
-  `${SCOPE}data/azkar.js`,
-  `${SCOPE}data/duas.js`,
-  `${SCOPE}data/tasks.js`,
-  `${SCOPE}data/names.js`,
-  `${SCOPE}data/stories.js`,
-  `${SCOPE}manifest.json`,
-  `${SCOPE}icons/icon-192x192.png`,
-  `${SCOPE}icons/icon-512x512.png`,
-  `${SCOPE}icons/Preview.png` // صورة Open Graph
+const CACHE_VERSION = 'azkar-v6';
+const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
+const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
+
+const APP_SHELL_URLS = [
+    './',
+    './index.html',
+    './manifest.json',
+
+    './css/main.css',
+    './css/modules.css',
+    './css/themes.css',
+
+    './js/dom.js',
+    './js/storage.js',
+    './js/achievements.js',
+    './js/content.js',
+    './js/masbaha.js',
+    './js/tasks/tasks-core.js',
+    './js/tasks/tasks-stats.js',
+    './js/tasks/tasks-motivation.js',
+    './js/tasks/tasks-ui.js',
+    './js/tasks.js',
+    './js/quran.js',
+    './js/notifications.js', // تمت إضافة ملف الإشعارات هنا
+    './js/app.js',
+    './js/pwa.js',
+    './js/firebase-core.js',
+
+    './data/azkar.js',
+    './data/names.js',
+    './data/messages.js',
+    './data/duasData.js',
+    './data/quranData.js',
+    './data/stories.js'
 ];
 
-// تثبيت: كاش للأصول الأساسية (مع تحمل الأخطاء عبر allSettled بدلاً من addAll)
-self.addEventListener('install', (event) => {
-  event.waitUntil((async () => {
-    const cache = await caches.open(CACHE_NAME);
-
-    await Promise.allSettled(
-      ASSETS.map((url) => cache.add(url))
-    );
-
-    await self.skipWaiting();
-  })());
-});
-
-// التفعيل: تنظيف الكاش القديم
-self.addEventListener('activate', (event) => {
-  event.waitUntil((async () => {
-    const keys = await caches.keys();
-    await Promise.all(
-      keys.map((key) => (key !== CACHE_NAME ? caches.delete(key) : null))
-    );
-    await self.clients.claim();
-  })());
-});
-
-// Helpers للتحقق من النطاق
-function isSameOrigin(requestUrl) {
-  return requestUrl.origin === self.location.origin;
-}
-
-function isInScope(pathname) {
-  return pathname.startsWith(SCOPE);
-}
-
-// توحيد مفتاح تخزين الـ HTML لتجنب تضخم الكاش مع الروابط المخصصة
-function getHtmlCacheKey() {
-  return new Request(`${SCOPE}index.html`);
-}
-
-// استراتيجية الجلب (Fetch Strategy)
-self.addEventListener('fetch', (event) => {
-  const req = event.request;
-
-  // التعامل فقط مع طلبات GET
-  if (req.method !== 'GET') return;
-
-  const url = new URL(req.url);
-
-  // تجاهل أي طلب خارج الدومين أو خارج نطاق التطبيق (مثل أدسنس/خطوط جوجل) لمنع CORS ومشاكل غير متوقعة
-  if (!isSameOrigin(url) || !isInScope(url.pathname)) return;
-
-  // HTML: Network-first لضمان وصول التحديثات سريعاً
-  const accept = req.headers.get('accept') || '';
-  const isHTML = accept.includes('text/html') || url.pathname.endsWith('/') || url.pathname.endsWith('.html');
-
-  if (isHTML) {
-    event.respondWith((async () => {
-      const cache = await caches.open(CACHE_NAME);
-      const htmlKey = getHtmlCacheKey();
-
-      try {
-        const fresh = await fetch(req, { cache: 'no-store' });
-
-        // نخزن نسخة واحدة من index.html فقط بغض النظر عن query parameters
-        cache.put(htmlKey, fresh.clone());
-
-        return fresh;
-      } catch {
-        // Offline fallback
-        return (await cache.match(htmlKey)) || caches.match(`${SCOPE}index.html`);
-      }
-    })());
-    return;
-  }
-
-  // Static assets: Cache-first مع تحمل فشل الشبكة
-  event.respondWith((async () => {
-    const cached = await caches.match(req);
-    if (cached) return cached;
-
-    try {
-      const fresh = await fetch(req);
-      const cache = await caches.open(CACHE_NAME);
-      cache.put(req, fresh.clone());
-      return fresh;
-    } catch {
-      // لو الملف مش موجود في الكاش وانقطع النت، نرجع fallback لطيف
-      return caches.match(`${SCOPE}index.html`);
-    }
-  })());
-});
-
-// الاستماع لرسالة التحديث الفوري من الواجهة
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
+self.addEventListener('install', event => {
     self.skipWaiting();
-  }
+    event.waitUntil(
+        caches.open(APP_SHELL_CACHE)
+            .then(cache => cache.addAll(APP_SHELL_URLS))
+    );
+});
+
+self.addEventListener('activate', event => {
+    const currentCaches = [APP_SHELL_CACHE, RUNTIME_CACHE];
+    event.waitUntil(
+        caches.keys().then(cacheNames => {
+            return cacheNames.filter(cacheName => !currentCaches.includes(cacheName));
+        }).then(cachesToDelete => {
+            return Promise.all(cachesToDelete.map(cacheToDelete => {
+                return caches.delete(cacheToDelete);
+            }));
+        }).then(() => self.clients.claim())
+    );
+});
+
+self.addEventListener('fetch', event => {
+    const request = event.request;
+
+    if (!request.url.startsWith(self.location.origin)) {
+        return;
+    }
+
+    event.respondWith(
+        caches.match(request).then(cached => {
+            if (cached) {
+                return cached;
+            }
+
+            return fetch(request)
+                .then(response => {
+                    // لا نخزن الاستجابات غير الناجحة
+                    if (!response || response.status !== 200 || response.type !== 'basic') {
+                        return response;
+                    }
+
+                    const copy = response.clone();
+                    caches.open(RUNTIME_CACHE).then(cache => cache.put(request, copy));
+
+                    return response;
+                })
+                .catch(() => {
+                    // fallback بسيط للملفات النصية/الصفحات
+                    if (request.destination === 'document') {
+                        return caches.match('./index.html');
+                    }
+
+                    return new Response('', {
+                        status: 404,
+                        statusText: 'Not Found'
+                    });
+                });
+        })
+    );
+});
+
+self.addEventListener('message', event => {
+    if (!event.data) return;
+
+    if (event.data.action === 'skipWaiting') {
+        self.skipWaiting();
+    }
+});
+
+// ==========================================
+// التعامل مع النقر على الإشعارات
+// ==========================================
+self.addEventListener('notificationclick', event => {
+    event.notification.close(); // إغلاق الإشعار عند النقر عليه
+
+    // المسار الذي سيتم فتحه (الصفحة الرئيسية أو قسم الأذكار)
+    const targetUrl = event.notification.data?.url || './index.html';
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+            // إذا كان التطبيق مفتوحاً بالفعل في الخلفية، قم بإحضاره للمقدمة
+            for (let i = 0; i < windowClients.length; i++) {
+                const client = windowClients[i];
+                if (client.url.includes('index.html') && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            // إذا كان التطبيق مغلقاً تماماً، افتح نافذة جديدة
+            if (clients.openWindow) {
+                return clients.openWindow(targetUrl);
+            }
+        })
+    );
 });
